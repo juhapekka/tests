@@ -7,9 +7,9 @@
 #include <sys/time.h>
 #include <unistd.h>
 
-#define imgwidth 512
-#define imgheight 512
-#define roundsperformat 1024
+unsigned int imgwidth = 512;
+unsigned int imgheight = 512;
+unsigned int testseconds = 10;
 
 typedef struct {
     int width;
@@ -145,6 +145,8 @@ static int ImageLoad(textureImage *image) {
           tempdata[c1*imgwidth*4 + c2*4+3] = (char)-1;
         }
     }
+    
+    printf("Texture size %d x %d\n", image->width, image->height );
 
     image->data = (unsigned char *) malloc(size);
     return 1;
@@ -168,15 +170,15 @@ static Bool testGLTextures()
         int                  bpp;
         int                  components;
     } testit[] = {
-        { "BGRA8888", PIXMAN_a8r8g8b8, PIXMAN_a8r8g8b8, GL_BGRA, GL_UNSIGNED_BYTE, 4, GL_RGBA8 },
-        { "BGRA8888", PIXMAN_a8r8g8b8, PIXMAN_b8g8r8a8, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, 4, GL_RGBA8 },
-        { "BGRA8888_rev", PIXMAN_a8r8g8b8, PIXMAN_a8r8g8b8, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, 4, GL_RGBA8 },
-        { "RGB565", PIXMAN_a8r8g8b8, PIXMAN_r5g6b5, GL_RGB, GL_UNSIGNED_SHORT_5_6_5, 2, GL_RGB },
-        { "RGB565_REV", PIXMAN_a8r8g8b8, PIXMAN_b5g6r5, GL_RGB, GL_UNSIGNED_SHORT_5_6_5_REV, 2, GL_RGB },
-        { "RGB888", PIXMAN_a8r8g8b8, PIXMAN_b8g8r8, GL_RGB, GL_UNSIGNED_BYTE, 3, GL_RGB8 },
-        { "RGB444_REV", PIXMAN_a8r8g8b8, PIXMAN_a4r4g4b4, GL_BGRA, GL_UNSIGNED_SHORT_4_4_4_4_REV, 2, GL_RGBA },
-        { "RGB444", PIXMAN_r8g8b8a8, PIXMAN_a4b4g4r4, GL_BGRA, GL_UNSIGNED_SHORT_4_4_4_4, 2, GL_RGBA },
-        { "RGBA2101010", PIXMAN_a8r8g8b8, PIXMAN_a2r10g10b10, GL_BGRA, GL_UNSIGNED_INT_10_10_10_2, 4, GL_RGBA }
+        { "BGRA8888, GL_UNSIGNED_BYTE", PIXMAN_a8r8g8b8, PIXMAN_a8r8g8b8, GL_BGRA, GL_UNSIGNED_BYTE, 4, GL_RGBA8 },
+        { "BGRA8888, GL_UNSIGNED_INT_8_8_8_8", PIXMAN_a8r8g8b8, PIXMAN_b8g8r8a8, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, 4, GL_RGBA8 },
+        { "GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV", PIXMAN_a8r8g8b8, PIXMAN_a8r8g8b8, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, 4, GL_RGBA8 },
+        { "GL_RGB, GL_UNSIGNED_SHORT_5_6_5", PIXMAN_a8r8g8b8, PIXMAN_r5g6b5, GL_RGB, GL_UNSIGNED_SHORT_5_6_5, 2, GL_RGB },
+        { "GL_RGB, GL_UNSIGNED_SHORT_5_6_5_REV", PIXMAN_a8r8g8b8, PIXMAN_b5g6r5, GL_RGB, GL_UNSIGNED_SHORT_5_6_5_REV, 2, GL_RGB },
+        { "GL_RGB, GL_UNSIGNED_BYTE", PIXMAN_a8r8g8b8, PIXMAN_b8g8r8, GL_RGB, GL_UNSIGNED_BYTE, 3, GL_RGB8 },
+        { "GL_BGRA, GL_UNSIGNED_SHORT_4_4_4_4_REV", PIXMAN_a8r8g8b8, PIXMAN_a4r4g4b4, GL_BGRA, GL_UNSIGNED_SHORT_4_4_4_4_REV, 2, GL_RGBA },
+        { "GL_BGRA, GL_UNSIGNED_SHORT_4_4_4_4", PIXMAN_r8g8b8a8, PIXMAN_a4b4g4r4, GL_BGRA, GL_UNSIGNED_SHORT_4_4_4_4, 2, GL_RGBA },
+        { "GL_BGRA, GL_UNSIGNED_INT_10_10_10_2", PIXMAN_a8r8g8b8, PIXMAN_a2r10g10b10, GL_BGRA, GL_UNSIGNED_INT_10_10_10_2, 4, GL_RGBA }
     };
 
     status = False;
@@ -199,17 +201,18 @@ static Bool testGLTextures()
                                        imgwidth*testit[index].bpp);
 
             gettimeofday(&t1, NULL);
-            for(c = 0; c < roundsperformat; c++) {
+            for(c = 0, elapsedTime = 0; elapsedTime < testseconds*1000; c++) {
                 glTexImage2D(GL_TEXTURE_2D, 0, testit[index].components,
                              texti->width, texti->height, 0,
                              testit[index].texType, testit[index].texFormat,
                              texti->data);
+                             
+                gettimeofday(&t2, NULL);
+                elapsedTime = (t2.tv_sec - t1.tv_sec)*1000;
+                elapsedTime += (t2.tv_usec - t1.tv_usec)/1000;
             }
-            gettimeofday(&t2, NULL);
-            elapsedTime = (t2.tv_sec - t1.tv_sec)*1000;
-            elapsedTime += (t2.tv_usec - t1.tv_usec)/1000;
             
-            printf("Time %s %f ms\n", testit[index].nimi, (float)elapsedTime );
+            printf("%d times %s format conversion in %ds\n", c-1, testit[index].nimi, testseconds );
 
             glClearColor( (index&0xf)/16.0f, 1.0-(index&0x7)/8.0f, 0.0, 1.0 );
             glClear( GL_COLOR_BUFFER_BIT );
@@ -307,7 +310,7 @@ int main( int argc, char *argv[] )
     glRotatef( 0.0f, 0.0f, 1.0f, 0.0f );
 
     testGLTextures();
-    
+
     glXMakeContextCurrent(dpy, 0, 0, 0);
     glXDestroyContext(dpy, context);
     glXDestroyWindow(dpy, glxWin);
