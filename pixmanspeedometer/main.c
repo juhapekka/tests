@@ -148,7 +148,8 @@ int main( int argc, char *argv[] )
          * stride lenghts are divisible by 4
          */
         images[c].stride = (((images[c].imgdata.width *
-                format_list[images[c].selection_list_index].format_bpp)-1)|3)+1;
+                format_list[images[c].selection_list_index].format_bpp)
+                -1)|3)+1;
 
         images[c].imgdata.data =
                 (unsigned char *) malloc(images[c].imgdata.height *
@@ -174,7 +175,8 @@ int main( int argc, char *argv[] )
              pixman_image_create_bits_no_clear(images[c].imgformat_pixman,
                                                images[c].imgdata.width,
                                                images[c].imgdata.height,
-                                               (uint32_t*)images[c].imgdata.data,
+                                               (uint32_t*)
+                                               images[c].imgdata.data,
                                                images[c].stride))
                 == NULL) {
             exitcode = EXIT_FAILURE;
@@ -199,7 +201,8 @@ int main( int argc, char *argv[] )
      * run timeloop test
      */
     gettimeofday(&t1, NULL);
-    for (c = 0, elapsedTime = 0; elapsedTime < testseconds && c < maxtests; c++) {
+    for (c = 0, elapsedTime = 0; elapsedTime < testseconds && c < maxtests;
+         c++) {
         pixman_image_composite(PIXMAN_OP_SRC,
                                images[test_source].thisimage_pixman,
                                (pixman_image_t*) NULL,
