@@ -45,8 +45,8 @@ struct {
     textureImage            imgdata;
 } images[] = {
     { 0, NULL, PIXMAN_a8r8g8b8, imgwidth*4, {imgwidth, imgheight, NULL} },
-    { 0, NULL, 0, imgwidth*4, {imgwidth, imgheight, NULL} },
-    { 0, NULL, 0, imgwidth*4, {imgwidth, imgheight, NULL} }
+    { 0, NULL, 0, 0, {imgwidth, imgheight, NULL} },
+    { 0, NULL, 0, 0, {imgwidth, imgheight, NULL} }
 };
 
 typedef enum {
@@ -56,7 +56,7 @@ typedef enum {
 } imagenames;
 
 
-static bool ImageLoad(const textureImage *image) {
+static bool image_load(const textureImage *image) {
     int c1, c2;
 
     for(c1 = 0; c1 < imgheight; c1++)
@@ -87,6 +87,15 @@ static bool ImageLoad(const textureImage *image) {
     return true;
 }
 
+static void print_accepted_formats()
+{
+    int c;
+    fprintf(stderr, "accepted formats:\n");
+
+    for(c = 0; c < sizeof(format_list)/sizeof(format_list[0]); c++ )
+        fprintf(stderr, "%s\n", format_list[c].format_name );
+}
+
 int main( int argc, char *argv[] )
 {
     int exitcode = EXIT_SUCCESS;
@@ -97,11 +106,9 @@ int main( int argc, char *argv[] )
 
     if (argc != 3) {
         fprintf(stderr, "-- simple pixman performance test\n"
-                "give two parameters, source and target formats\n"
-                "accepted formats:\n");
+                "give two parameters, source and target formats\n" );
 
-        for(c = 0; c < sizeof(format_list)/sizeof(format_list[0]); c++ )
-            fprintf(stderr, "%s\n", format_list[c].format_name );
+        print_accepted_formats();
 
         exitcode = EXIT_FAILURE;
         goto away;
@@ -116,13 +123,19 @@ int main( int argc, char *argv[] )
     }
 
     if (images[test_source].imgformat_pixman == 0) {
-        fprintf(stderr, "Not supported format %s\n", argv[1] );
+        fprintf(stderr, "Not supported format %s for source\n", argv[1] );
+
+        print_accepted_formats();
+
         exitcode = EXIT_FAILURE;
         goto away;
     }
 
     if (images[test_target].imgformat_pixman == 0) {
-        fprintf(stderr, "Not supported format %s\n", argv[2] );
+        fprintf(stderr, "Not supported format %s for target\n", argv[2] );
+
+        print_accepted_formats();
+
         exitcode = EXIT_FAILURE;
         goto away;
     }
@@ -151,7 +164,7 @@ int main( int argc, char *argv[] )
      * make complex test image
      */
 
-    if (!ImageLoad(&images[original].imgdata)) {
+    if (!image_load(&images[original].imgdata)) {
         exitcode = EXIT_FAILURE;
         goto away;
     }
@@ -201,7 +214,7 @@ int main( int argc, char *argv[] )
         elapsedTime = t2.tv_sec - t1.tv_sec;
     }
 
-    fprintf(stderr, "%d times conversion %s to %s format conversion in %ds\n", c-1,
+    fprintf(stderr, "%d times conversion from %s to %s format in %ds\n", c-1,
             format_list[images[test_source].selection_list_index].format_name,
             format_list[images[test_target].selection_list_index].format_name,
             elapsedTime);
