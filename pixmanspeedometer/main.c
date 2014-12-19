@@ -88,8 +88,8 @@ struct {
     textureImage            imgdata;
 } images[] = {
     { 0, NULL, PIXMAN_a8r8g8b8, imgwidth*4, {imgwidth, imgheight, NULL} },
-    { 0, NULL, 0, 0, {imgwidth, imgheight, NULL} },
-    { 0, NULL, 0, 0, {imgwidth, imgheight, NULL} }
+    { 0, NULL, -1, 0, {imgwidth, imgheight, NULL} },
+    { 0, NULL, -1, 0, {imgwidth, imgheight, NULL} }
 };
 
 typedef enum {
@@ -174,14 +174,19 @@ int main( int argc, char *argv[] )
     }
 
     for(c = 0; c < sizeof(format_list)/sizeof(format_list[0]); c++ ) {
-        if (strcmp(format_list[c].format_name, argv[1]) == 0)
+        if (strcmp(format_list[c].format_name, argv[1]) == 0) {
             images[test_source].imgformat_pixman = format_list[c].format;
+            images[test_source].selection_list_index = c;
+        }
 
-        if (strcmp(format_list[c].format_name, argv[2]) == 0)
+
+        if (strcmp(format_list[c].format_name, argv[2]) == 0) {
             images[test_target].imgformat_pixman = format_list[c].format;
+            images[test_target].selection_list_index = c;
+        }
     }
 
-    if (images[test_source].imgformat_pixman == 0) {
+    if (images[test_source].imgformat_pixman == -1) {
         fprintf(stderr, "Not supported format %s for source\n", argv[1] );
 
         print_accepted_formats();
@@ -190,7 +195,7 @@ int main( int argc, char *argv[] )
         goto away;
     }
 
-    if (images[test_target].imgformat_pixman == 0) {
+    if (images[test_target].imgformat_pixman == -1) {
         fprintf(stderr, "Not supported format %s for target\n", argv[2] );
 
         print_accepted_formats();
