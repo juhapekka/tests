@@ -16,19 +16,62 @@ const bool looponce = false;
 const struct {
     pixman_format_code_t    format;
     char*                   format_name;
-    unsigned                format_bpp;
 } format_list[] = {
-    {PIXMAN_a8r8g8b8, "PIXMAN_a8r8g8b8", 4 },
-    {PIXMAN_b8g8r8a8, "PIXMAN_b8g8r8a8", 4 },
-    {PIXMAN_r8g8b8a8, "PIXMAN_r8g8b8a8", 4 },
-    {PIXMAN_a2r10g10b10, "PIXMAN_a2r10g10b10", 4 },
-
-    {PIXMAN_b8g8r8, "PIXMAN_b8g8r8", 3 },
-
-    {PIXMAN_r5g6b5, "PIXMAN_r5g6b5", 2 },
-    {PIXMAN_b5g6r5, "PIXMAN_b5g6r5", 2 },
-    {PIXMAN_a4r4g4b4, "PIXMAN_a4r4g4b4", 2 },
-    {PIXMAN_a4b4g4r4, "PIXMAN_a4b4g4r4", 2 }
+    { -1, "32bpp formats:" },
+    { PIXMAN_a8r8g8b8, "PIXMAN_a8r8g8b8" },
+    { PIXMAN_x8r8g8b8, "PIXMAN_x8r8g8b8" },
+    { PIXMAN_a8b8g8r8, "PIXMAN_a8b8g8r8" },
+    { PIXMAN_x8b8g8r8, "PIXMAN_x8b8g8r8" },
+    { PIXMAN_b8g8r8a8, "PIXMAN_b8g8r8a8" },
+    { PIXMAN_b8g8r8x8, "PIXMAN_b8g8r8x8" },
+    { PIXMAN_r8g8b8a8, "PIXMAN_r8g8b8a8" },
+    { PIXMAN_r8g8b8x8, "PIXMAN_r8g8b8x8" },
+    { PIXMAN_x14r6g6b6, "PIXMAN_x14r6g6b6" },
+    { PIXMAN_x2r10g10b10, "PIXMAN_x2r10g10b10" },
+    { PIXMAN_a2r10g10b10, "PIXMAN_a2r10g10b10" },
+    { PIXMAN_x2b10g10r10, "PIXMAN_x2b10g10r10" },
+    { PIXMAN_a2b10g10r10, "PIXMAN_a2b10g10r10" },
+    { -1, "sRGB formats:" },
+    { PIXMAN_a8r8g8b8_sRGB, "PIXMAN_a8r8g8b8_sRGB" },
+    { -1, "24bpp formats:" },
+    { PIXMAN_r8g8b8, "PIXMAN_r8g8b8" },
+    { PIXMAN_b8g8r8, "PIXMAN_b8g8r8" },
+    { -1, "16bpp formats:" },
+    { PIXMAN_r5g6b5, "PIXMAN_r5g6b5" },
+    { PIXMAN_b5g6r5, "PIXMAN_b5g6r5" },
+    { PIXMAN_a1r5g5b5, "PIXMAN_a1r5g5b5" },
+    { PIXMAN_x1r5g5b5, "PIXMAN_x1r5g5b5" },
+    { PIXMAN_a1b5g5r5, "PIXMAN_a1b5g5r5" },
+    { PIXMAN_x1b5g5r5, "PIXMAN_x1b5g5r5" },
+    { PIXMAN_a4r4g4b4, "PIXMAN_a4r4g4b4" },
+    { PIXMAN_x4r4g4b4, "PIXMAN_x4r4g4b4" },
+    { PIXMAN_a4b4g4r4, "PIXMAN_a4b4g4r4" },
+    { PIXMAN_x4b4g4r4, "PIXMAN_x4b4g4r4" },
+    { -1, "8bpp formats:" },
+    { PIXMAN_a8, "PIXMAN_a8" },
+    { PIXMAN_r3g3b2, "PIXMAN_r3g3b2" },
+    { PIXMAN_b2g3r3, "PIXMAN_b2g3r3" },
+    { PIXMAN_a2r2g2b2, "PIXMAN_a2r2g2b2" },
+    { PIXMAN_a2b2g2r2, "PIXMAN_a2b2g2r2" },
+    { PIXMAN_c8, "PIXMAN_c8" },
+    { PIXMAN_g8, "PIXMAN_g8" },
+    { PIXMAN_x4a4, "PIXMAN_x4a4" },
+    { PIXMAN_x4c4, "PIXMAN_x4c4" },
+    { PIXMAN_x4g4, "PIXMAN_x4g4" },
+    { -1, "4bpp formats:" },
+    { PIXMAN_a4, "PIXMAN_a4" },
+    { PIXMAN_r1g2b1, "PIXMAN_r1g2b1" },
+    { PIXMAN_b1g2r1, "PIXMAN_b1g2r1" },
+    { PIXMAN_a1r1g1b1, "PIXMAN_a1r1g1b1" },
+    { PIXMAN_a1b1g1r1, "PIXMAN_a1b1g1r1" },
+    { PIXMAN_c4, "PIXMAN_c4" },
+    { PIXMAN_g4, "PIXMAN_g4" },
+    { -1, "1bpp formats:" },
+    { PIXMAN_a1, "PIXMAN_a1" },
+    { PIXMAN_g1, "PIXMAN_g1" },
+    { -1, "YUV formats:" },
+    { PIXMAN_yuy2, "PIXMAN_yuy2" },
+    { PIXMAN_yv12, "PIXMAN_yv12" }
 };
 
 typedef struct {
@@ -89,11 +132,26 @@ static bool image_load(const textureImage *image) {
 
 static void print_accepted_formats()
 {
-    int c;
-    fprintf(stderr, "accepted formats:\n");
+    int c, c2;
+    fprintf(stderr, "accepted formats:");
 
-    for(c = 0; c < sizeof(format_list)/sizeof(format_list[0]); c++ )
-        fprintf(stderr, "%s\n", format_list[c].format_name );
+    for(c = c2 = 0; c < sizeof(format_list)/sizeof(format_list[0]);
+        c++ ) {
+
+        if (format_list[c].format != -1 ) {
+            fprintf(stderr, "%-19s", format_list[c].format_name );
+
+            if (++c2 > 2) {
+                c2 = 0;
+                fprintf(stderr, "\n");
+            }
+        }
+        else {
+            fprintf(stderr, "\n\n%s\n", format_list[c].format_name );
+            c2 = 0;
+        }
+    }
+    fprintf(stderr, "\n\n");
 }
 
 int main( int argc, char *argv[] )
@@ -102,11 +160,12 @@ int main( int argc, char *argv[] )
     int c;
     const int maxtests = looponce?1:0x7fffffff;
     struct timeval t1, t2;
-    int elapsedTime;
+    double elapsedTime;
 
     if (argc != 3) {
-        fprintf(stderr, "-- simple pixman performance test\n"
-                "give two parameters, source and target formats\n" );
+        fprintf(stderr, "-- simple pixman image format conversion performance"
+                " test\ngive two parameters, source and target formats\n"
+                "%s <source format> <target format>\n", argv[0] );
 
         print_accepted_formats();
 
@@ -148,8 +207,7 @@ int main( int argc, char *argv[] )
          * stride lenghts are divisible by 4
          */
         images[c].stride = (((images[c].imgdata.width *
-                format_list[images[c].selection_list_index].format_bpp)
-                -1)|3)+1;
+                PIXMAN_FORMAT_BPP(images[c].imgformat_pixman))-1)|3)+1;
 
         images[c].imgdata.data =
                 (unsigned char *) malloc(images[c].imgdata.height *
@@ -201,8 +259,8 @@ int main( int argc, char *argv[] )
      * run timeloop test
      */
     gettimeofday(&t1, NULL);
-    for (c = 0, elapsedTime = 0; elapsedTime < testseconds && c < maxtests;
-         c++) {
+    for (c = 0, elapsedTime = 0; elapsedTime < testseconds*1000.0f &&
+         c < maxtests; c++) {
         pixman_image_composite(PIXMAN_OP_SRC,
                                images[test_source].thisimage_pixman,
                                (pixman_image_t*) NULL,
@@ -214,13 +272,14 @@ int main( int argc, char *argv[] )
                                images[original].imgdata.height);
 
         gettimeofday(&t2, NULL);
-        elapsedTime = t2.tv_sec - t1.tv_sec;
+        elapsedTime = (t2.tv_sec - t1.tv_sec)*1000.0f;
+        elapsedTime += (t2.tv_usec - t1.tv_usec)/1000.0f;
     }
 
-    fprintf(stderr, "%d times conversion from %s to %s format in %ds\n", c-1,
+    fprintf(stderr, "%d times conversion from %s to %s format in %.3fs\n", c,
             format_list[images[test_source].selection_list_index].format_name,
             format_list[images[test_target].selection_list_index].format_name,
-            elapsedTime);
+            elapsedTime/1000.0f);
 
 away:
     for (c = 0; c < sizeof(images)/sizeof(images[0]); c++) {
