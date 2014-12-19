@@ -5,8 +5,8 @@
 #include <stdbool.h>
 #include <string.h>
 
-#define imgwidth 512
-#define imgheight 512
+#define imgwidth 1024
+#define imgheight 1024
 const int testseconds = 5;
 const bool looponce = false;
 
@@ -75,21 +75,21 @@ const struct {
 };
 
 typedef struct {
-    unsigned width;
-    unsigned height;
-    unsigned char *data;
+    unsigned        width;
+    unsigned        height;
+    unsigned        stride;
+    unsigned char*  data;
 } textureImage;
 
 struct {
     unsigned                selection_list_index;
-    pixman_image_t          *thisimage_pixman;
+    pixman_image_t*         thisimage_pixman;
     pixman_format_code_t    imgformat_pixman;
-    unsigned                stride;
     textureImage            imgdata;
 } images[] = {
-    { 0, NULL, PIXMAN_a8r8g8b8, imgwidth*4, {imgwidth, imgheight, NULL} },
-    { 0, NULL, -1, 0, {imgwidth, imgheight, NULL} },
-    { 0, NULL, -1, 0, {imgwidth, imgheight, NULL} }
+    { 0, NULL, PIXMAN_a8r8g8b8, {imgwidth, imgheight, 0, NULL} },
+    { 0, NULL,              -1, {imgwidth, imgheight, 0, NULL} },
+    { 0, NULL,              -1, {imgwidth, imgheight, 0, NULL} }
 };
 
 typedef enum {
@@ -99,40 +99,35 @@ typedef enum {
 } imagenames;
 
 
-static bool image_load(const textureImage *image) {
-    int c1, c2;
+static void image_load(const textureImage* image) {
+    unsigned c1, c2;
 
-    for(c1 = 0; c1 < imgheight; c1++)
-    {
-      double y0 = ((((c1)*3.0)/imgheight)-1.5 );
-        for(c2 = 0; c2 < imgwidth; c2++)
-        {
-          double x0 = ((((c2)*3.5)/imgwidth)-2.5 );
-          double x = 0.0;
-          double y = 0.0;
+    for(c1 = 0; c1 < image->height; c1++) {
+        double y0 = ((((c1)*3.0)/image->height)-1.5 );
+        for(c2 = 0; c2 < image->width; c2++) {
+            double x0 = ((((c2)*3.5)/image->width)-2.5 );
+            double x = 0.0;
+            double y = 0.0;
 
-          int iteration = 0;
-          int max_iteration = 1024;
-          while ( x*x + y*y < 2*2  &&  iteration < max_iteration )
-          {
-            double xtemp = x*x - y*y + x0;
-            y = 2*x*y + y0;
-            x = xtemp;
-            iteration = iteration + 1;
-          }
+            unsigned  iteration = 0, max_iteration = 1024;
+            while ( x*x + y*y < 2*2  &&  iteration < max_iteration ) {
+                double xtemp = x*x - y*y + x0;
+                y = 2*x*y + y0;
+                x = xtemp;
+                iteration++;
+            }
 
-          image->data[c1*imgwidth*4 + c2*4] = (char)((iteration%2)*128);
-          image->data[c1*imgwidth*4 + c2*4+1] = (char)((iteration%4)*64);
-          image->data[c1*imgwidth*4 + c2*4+2] = (char)((iteration%8)*32);
-          image->data[c1*imgwidth*4 + c2*4+3] = (char)-1;
+            image->data[c1*image->stride + c2*4] = (char)((iteration%2)*128);
+            image->data[c1*image->stride + c2*4+1] = (char)((iteration%4)*64);
+            image->data[c1*image->stride + c2*4+2] = (char)((iteration%8)*32);
+            image->data[c1*image->stride + c2*4+3] = (char)-1;
         }
     }
-    return true;
 }
 
 static void print_accepted_formats()
 {
-    int c, c2;
+    unsigned c, c2;
     fprintf(stderr, "accepted formats:");
 
     for(c = c2 = 0; c < sizeof(format_list)/sizeof(format_list[0]);
@@ -168,11 +163,13 @@ int main( int argc, char *argv[] )
                 "%s <source format> <target format>\n", argv[0] );
 
         print_accepted_formats();
-
         exitcode = EXIT_FAILURE;
         goto away;
     }
 
+    /*
+     * find desired formats
+     */
     for(c = 0; c < sizeof(format_list)/sizeof(format_list[0]); c++ ) {
         if (strcmp(format_list[c].format_name, argv[1]) == 0) {
             images[test_source].imgformat_pixman = format_list[c].format;
@@ -190,7 +187,6 @@ int main( int argc, char *argv[] )
         fprintf(stderr, "Not supported format %s for source\n", argv[1] );
 
         print_accepted_formats();
-
         exitcode = EXIT_FAILURE;
         goto away;
     }
@@ -199,7 +195,6 @@ int main( int argc, char *argv[] )
         fprintf(stderr, "Not supported format %s for target\n", argv[2] );
 
         print_accepted_formats();
-
         exitcode = EXIT_FAILURE;
         goto away;
     }
@@ -211,12 +206,12 @@ int main( int argc, char *argv[] )
         /*
          * stride lenghts are divisible by 4
          */
-        images[c].stride = (((images[c].imgdata.width *
+        images[c].imgdata.stride = (((images[c].imgdata.width *
                 PIXMAN_FORMAT_BPP(images[c].imgformat_pixman))-1)|3)+1;
 
         images[c].imgdata.data =
-                (unsigned char *) malloc(images[c].imgdata.height *
-                                         images[c].stride);
+                (unsigned char*) malloc(images[c].imgdata.height *
+                                        images[c].imgdata.stride);
 
         if (images[c].imgdata.data == NULL) {
             exitcode = EXIT_FAILURE;
@@ -227,11 +222,7 @@ int main( int argc, char *argv[] )
     /*
      * make complex test image
      */
-
-    if (!image_load(&images[original].imgdata)) {
-        exitcode = EXIT_FAILURE;
-        goto away;
-    }
+    image_load(&images[original].imgdata);
 
     for (c = 0; c < sizeof(images)/sizeof(images[0]); c++) {
         if ((images[c].thisimage_pixman =
@@ -240,7 +231,7 @@ int main( int argc, char *argv[] )
                                                images[c].imgdata.height,
                                                (uint32_t*)
                                                images[c].imgdata.data,
-                                               images[c].stride))
+                                               images[c].imgdata.stride))
                 == NULL) {
             exitcode = EXIT_FAILURE;
             goto away;
@@ -264,7 +255,7 @@ int main( int argc, char *argv[] )
      * run timeloop test
      */
     gettimeofday(&t1, NULL);
-    for (c = 0, elapsedTime = 0; elapsedTime < testseconds*1000.0f &&
+    for (c = 0, elapsedTime = 0; elapsedTime < testseconds*1000 &&
          c < maxtests; c++) {
         pixman_image_composite(PIXMAN_OP_SRC,
                                images[test_source].thisimage_pixman,
@@ -273,8 +264,8 @@ int main( int argc, char *argv[] )
                                0, 0,
                                0, 0,
                                0, 0,
-                               images[original].imgdata.width,
-                               images[original].imgdata.height);
+                               images[test_source].imgdata.width,
+                               images[test_source].imgdata.height);
 
         gettimeofday(&t2, NULL);
         elapsedTime = (t2.tv_sec - t1.tv_sec)*1000.0f;
