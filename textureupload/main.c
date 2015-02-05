@@ -9,7 +9,7 @@
 
 unsigned int imgwidth = 512;
 unsigned int imgheight = 512;
-unsigned int testseconds = 10;
+unsigned int testseconds = 1;
 
 typedef struct {
     int width;
